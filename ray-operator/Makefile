@@ -53,6 +53,11 @@ helm: manifests ## Sync the CRDs into the Helm chart
 	rm -r ../helm-chart/kuberay-operator/crds/
 	cp -r config/crd/bases/ ../helm-chart/kuberay-operator/crds/
 
+sync-module-manifests: manifests ## Sync CRDs and infra manifests into the module controller embed dir
+	cp config/crd/bases/ray.io_rayclusters.yaml controllers/module/manifests/
+	cp config/crd/bases/ray.io_rayjobs.yaml controllers/module/manifests/
+	cp config/crd/bases/ray.io_rayservices.yaml controllers/module/manifests/
+
 fmt: ## Run go fmt against code.
 	go fmt ./...
 

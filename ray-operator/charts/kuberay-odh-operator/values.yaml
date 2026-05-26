@@ -1,0 +1,46 @@
+# Namespace where the module operator is deployed.
+# The platform injects this via NamespaceValueKey.
+operatorNamespace: opendatahub
+
+image:
+  repository: quay.io/stobin/kuberay-tests
+  tag: latest
+  pullPolicy: Always
+
+serviceAccount:
+  name: kuberay-operator
+
+enableLeaderElection: true
+
+# Comma-separated namespaces to watch. Empty = all namespaces.
+watchNamespace: ""
+
+featureGates:
+  - name: RayClusterStatusConditions
+    enabled: true
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 512Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
+
+livenessProbe:
+  initialDelaySeconds: 15
+  periodSeconds: 20
+
+readinessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 15
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault

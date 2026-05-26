@@ -45,7 +45,7 @@ env_vars:
 						WithRayStartParams(map[string]string{
 							"dashboard-host": "0.0.0.0",
 							"num-gpus":       "4",
-							"num-cpus":       "4",
+							"num-cpus":       "8",
 							"resources":      `'{"R1": 4}'`,
 						}).
 						WithTemplate(podTemplateSpecApplyConfiguration(headPodTemplateApplyConfiguration(),

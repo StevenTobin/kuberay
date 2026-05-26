@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kuberay-odh-operator.name" . }}
+  namespace: {{ .Values.operatorNamespace }}
+  labels:
+    {{- include "kuberay-odh-operator.labels" . | nindent 4 }}
+    control-plane: kuberay-operator
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "kuberay-odh-operator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kuberay-odh-operator.selectorLabels" . | nindent 8 }}
+        control-plane: kuberay-operator
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: manager
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /manager
+          args:
+            {{- $args := list }}
+            {{- $fg := include "kuberay-odh-operator.featureGates" . | trim }}
+            {{- if $fg }}
+            {{- $args = append $args $fg }}
+            {{- end }}
+            {{- if hasKey .Values "enableLeaderElection" }}
+            {{- $args = append $args (printf "--enable-leader-election=%t" .Values.enableLeaderElection) }}
+            {{- end }}
+            {{- if .Values.watchNamespace }}
+            {{- $args = append $args "--watch-namespace" }}
+            {{- $args = append $args .Values.watchNamespace }}
+            {{- end }}
+            {{- toYaml $args | nindent 12 }}
+          ports:
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: trusted-ca
+              mountPath: /etc/pki/tls/custom
+              readOnly: true
+      volumes:
+        - name: trusted-ca
+          configMap:
+            name: odh-trusted-ca-bundle
+            optional: true

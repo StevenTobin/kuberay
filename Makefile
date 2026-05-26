@@ -1,6 +1,6 @@
 # Image tag for image containing e2e tests
 E2E_TEST_IMAGE_VERSION ?= latest
-E2E_TEST_IMAGE ?= quay.io/opendatahub/kuberay-tests:${E2E_TEST_IMAGE_VERSION}
+E2E_TEST_IMAGE ?= quay.io/stobin/kuberay-tests:${E2E_TEST_IMAGE_VERSION}
 
 # Build the test image
 .PHONY: build-test-image

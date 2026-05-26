@@ -1,0 +1,16 @@
+apiVersion: v2
+name: kuberay-odh-operator
+description: >-
+  Minimal bootstrap chart for the KubeRay module operator in the
+  Open Data Hub platform. Deploys only the operator Deployment, RBAC,
+  module CRD, and ConfigMap. The operator itself manages ray.io CRDs,
+  webhooks, and SCC at runtime.
+version: 0.1.0
+appVersion: "1.4.4"
+type: application
+keywords:
+  - ray
+  - kuberay
+  - opendatahub
+  - module
+home: https://github.com/opendatahub-io/kuberay

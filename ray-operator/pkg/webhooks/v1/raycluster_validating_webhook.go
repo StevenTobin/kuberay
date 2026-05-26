@@ -5,12 +5,10 @@ import (
 	"regexp"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	rayv1 "github.com/ray-project/kuberay/ray-operator/apis/ray/v1"
@@ -24,8 +22,7 @@ var (
 
 // SetupRayClusterValidatorWithManager registers the webhook for RayCluster in the manager.
 func SetupRayClusterValidatorWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&rayv1.RayCluster{}).
+	return ctrl.NewWebhookManagedBy(mgr, &rayv1.RayCluster{}).
 		WithValidator(&RayClusterValidator{}).
 		Complete()
 }
@@ -35,24 +32,22 @@ type RayClusterValidator struct{}
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-ray-io-v1-raycluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=ray.io,resources=rayclusters,verbs=create;update,versions=v1,name=vraycluster.kb.io,admissionReviewVersions=v1
 
-var _ webhook.CustomValidator = &RayClusterValidator{}
+var _ admission.Validator[*rayv1.RayCluster] = &RayClusterValidator{}
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type
-func (w *RayClusterValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	rayCluster := obj.(*rayv1.RayCluster)
+func (w *RayClusterValidator) ValidateCreate(_ context.Context, rayCluster *rayv1.RayCluster) (admission.Warnings, error) {
 	rayclusterlog.Info("validate create", "name", rayCluster.Name)
 	return nil, w.validateRayCluster(rayCluster)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type
-func (w *RayClusterValidator) ValidateUpdate(_ context.Context, _ runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
-	rayCluster := newObj.(*rayv1.RayCluster)
-	rayclusterlog.Info("validate update", "name", rayCluster.Name)
-	return nil, w.validateRayCluster(rayCluster)
+func (w *RayClusterValidator) ValidateUpdate(_ context.Context, _ *rayv1.RayCluster, newObj *rayv1.RayCluster) (admission.Warnings, error) {
+	rayclusterlog.Info("validate update", "name", newObj.Name)
+	return nil, w.validateRayCluster(newObj)
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type
-func (w *RayClusterValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (w *RayClusterValidator) ValidateDelete(_ context.Context, _ *rayv1.RayCluster) (admission.Warnings, error) {
 	return nil, nil
 }
 

@@ -20,6 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,7 +35,9 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configapi "github.com/ray-project/kuberay/ray-operator/apis/config/v1alpha1"
+	modulev1alpha1 "github.com/ray-project/kuberay/ray-operator/apis/module/v1alpha1"
 	rayv1 "github.com/ray-project/kuberay/ray-operator/apis/ray/v1"
+	modulecontroller "github.com/ray-project/kuberay/ray-operator/controllers/module"
 	"github.com/ray-project/kuberay/ray-operator/controllers/ray"
 	"github.com/ray-project/kuberay/ray-operator/controllers/ray/metrics"
 	"github.com/ray-project/kuberay/ray-operator/controllers/ray/utils"
@@ -56,6 +60,7 @@ func init() {
 	utilruntime.Must(certmanagerv1.AddToScheme(scheme))
 	utilruntime.Must(gatewayv1.Install(scheme))
 	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
+	utilruntime.Must(modulev1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -76,6 +81,8 @@ func main() {
 	var enableBatchScheduler bool
 	var batchScheduler string
 	var enableMetrics bool
+	var enableModuleController bool
+	var operatorNamespace string
 
 	// TODO: remove flag-based config once Configuration API graduates to v1.
 	flag.StringVar(&metricsAddr, "metrics-addr", configapi.DefaultMetricsAddr, "The address the metric endpoint binds to.")
@@ -107,6 +114,10 @@ func main() {
 		"Use Kubernetes proxy subresource when connecting to the Ray Head node.")
 	flag.StringVar(&featureGates, "feature-gates", "", "A set of key=value pairs that describe feature gates. E.g. FeatureOne=true,FeatureTwo=false,...")
 	flag.BoolVar(&enableMetrics, "enable-metrics", false, "Enable the emission of control plane metrics.")
+	flag.BoolVar(&enableModuleController, "enable-module-controller", false,
+		"Enable the ODH module controller that reconciles the Ray module CR and deploys ray.io infrastructure.")
+	flag.StringVar(&operatorNamespace, "operator-namespace", "opendatahub",
+		"Namespace where the module operator is deployed. Used for webhook service and SCC references.")
 
 	opts := k8szap.Options{
 		TimeEncoder: zapcore.ISO8601TimeEncoder,
@@ -291,6 +302,28 @@ func main() {
 		exitOnError(webhooks.SetupRayClusterValidatorWithManager(mgr),
 			"unable to create webhook", "webhook", "RayCluster-Validator")
 	}
+	if enableModuleController {
+		isOpenShift := utils.GetClusterType()
+		dynamicClient, err := dynamic.NewForConfig(restConfig)
+		exitOnError(err, "unable to create dynamic client for module controller")
+		discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+		exitOnError(err, "unable to create discovery client for module controller")
+
+		moduleReconciler, err := modulecontroller.NewRayModuleReconciler(
+			mgr.GetClient(),
+			mgr.GetScheme(),
+			operatorNamespace,
+			modulecontroller.ModuleManifests,
+			isOpenShift,
+			dynamicClient,
+			discoveryClient,
+		)
+		exitOnError(err, "unable to create module reconciler")
+		exitOnError(moduleReconciler.SetupWithManager(mgr),
+			"unable to create controller", "controller", "RayModule")
+		setupLog.Info("module controller enabled", "namespace", operatorNamespace, "openshift", isOpenShift)
+	}
+
 	// +kubebuilder:scaffold:builder
 
 	exitOnError(mgr.AddHealthzCheck("healthz", healthz.Ping), "unable to set up health check")

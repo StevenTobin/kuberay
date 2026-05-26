@@ -1,0 +1,374 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kuberay-operator
+  labels:
+    {{- include "kuberay-odh-operator.labels" . | nindent 4 }}
+rules:
+# --- Module CR (components.platform.opendatahub.io/v1alpha1) ---
+- apiGroups:
+    - components.platform.opendatahub.io
+  resources:
+    - rays
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - components.platform.opendatahub.io
+  resources:
+    - rays/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - components.platform.opendatahub.io
+  resources:
+    - rays/finalizers
+  verbs:
+    - update
+
+# --- CRD self-management (operator deploys ray.io CRDs) ---
+- apiGroups:
+    - apiextensions.k8s.io
+  resources:
+    - customresourcedefinitions
+  verbs:
+    - create
+    - get
+    - list
+    - patch
+    - update
+    - watch
+
+# --- Webhook self-management ---
+- apiGroups:
+    - admissionregistration.k8s.io
+  resources:
+    - mutatingwebhookconfigurations
+    - validatingwebhookconfigurations
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+
+# --- SCC (OpenShift) ---
+- apiGroups:
+    - security.openshift.io
+  resources:
+    - securitycontextconstraints
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+
+# --- Core resources ---
+- apiGroups:
+    - ""
+  resources:
+    - configmaps
+    - events
+    - pods/status
+    - serviceaccounts
+    - services
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - endpoints
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - pods
+  verbs:
+    - create
+    - delete
+    - deletecollection
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - pods/proxy
+    - services/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+  verbs:
+    - delete
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - services/proxy
+  verbs:
+    - create
+    - get
+    - patch
+    - update
+
+# --- Apps ---
+- apiGroups:
+    - apps
+  resources:
+    - deployments
+  verbs:
+    - get
+    - list
+    - patch
+    - update
+    - watch
+
+# --- Auth ---
+- apiGroups:
+    - authentication.k8s.io
+  resources:
+    - tokenreviews
+  verbs:
+    - create
+- apiGroups:
+    - authorization.k8s.io
+  resources:
+    - subjectaccessreviews
+  verbs:
+    - create
+
+# --- Batch ---
+- apiGroups:
+    - batch
+  resources:
+    - jobs
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+
+# --- Cert-Manager ---
+- apiGroups:
+    - cert-manager.io
+  resources:
+    - certificates
+    - issuers
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - cert-manager.io
+  resources:
+    - certificates/status
+  verbs:
+    - get
+    - patch
+    - update
+
+# --- OpenShift config ---
+- apiGroups:
+    - config.openshift.io
+  resources:
+    - authentications
+    - authentications/status
+    - oauths
+    - oauths/status
+  verbs:
+    - get
+    - list
+    - watch
+
+# --- Leader election ---
+- apiGroups:
+    - coordination.k8s.io
+  resources:
+    - leases
+  verbs:
+    - create
+    - get
+    - list
+    - update
+
+# --- Networking ---
+- apiGroups:
+    - extensions
+  resources:
+    - ingresses
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - gateway.networking.k8s.io
+  resources:
+    - gateways
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - gateway.networking.k8s.io
+  resources:
+    - httproutes
+    - referencegrants
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - networking.k8s.io
+  resources:
+    - ingressclasses
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - networking.k8s.io
+  resources:
+    - ingresses
+    - networkpolicies
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+
+# --- OpenShift operator ---
+- apiGroups:
+    - operator.openshift.io
+  resources:
+    - kubeapiservers
+    - kubeapiservers/status
+  verbs:
+    - get
+    - list
+    - watch
+
+# --- ray.io ---
+- apiGroups:
+    - ray.io
+  resources:
+    - rayclusters
+    - rayjobs
+    - rayservices
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - ray.io
+  resources:
+    - rayclusters/finalizers
+    - rayjobs/finalizers
+    - rayservices/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - ray.io
+  resources:
+    - rayclusters/status
+    - rayjobs/status
+    - rayservices/status
+  verbs:
+    - get
+    - patch
+    - update
+
+# --- RBAC ---
+- apiGroups:
+    - rbac.authorization.k8s.io
+  resources:
+    - clusterrolebindings
+    - clusterroles
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - rbac.authorization.k8s.io
+  resources:
+    - rolebindings
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - rbac.authorization.k8s.io
+  resources:
+    - roles
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - update
+    - watch
+
+# --- OpenShift routes ---
+- apiGroups:
+    - route.openshift.io
+  resources:
+    - routes
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch

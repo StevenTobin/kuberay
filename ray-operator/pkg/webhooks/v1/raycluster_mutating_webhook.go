@@ -5,9 +5,8 @@ import (
 
 	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	rayv1 "github.com/ray-project/kuberay/ray-operator/apis/ray/v1"
 	"github.com/ray-project/kuberay/ray-operator/controllers/ray/utils"
@@ -20,12 +19,10 @@ type RayClusterDefaulter struct {
 
 //+kubebuilder:webhook:path=/mutate-ray-io-v1-raycluster,mutating=true,failurePolicy=fail,sideEffects=None,groups=ray.io,resources=rayclusters,verbs=create;update,versions=v1,name=mraycluster.kb.io,admissionReviewVersions=v1
 
-var _ webhook.CustomDefaulter = &RayClusterDefaulter{}
+var _ admission.Defaulter[*rayv1.RayCluster] = &RayClusterDefaulter{}
 
 // Default implements webhook.CustomDefaulter
-func (d *RayClusterDefaulter) Default(_ context.Context, obj runtime.Object) error {
-	rayCluster := obj.(*rayv1.RayCluster)
-
+func (d *RayClusterDefaulter) Default(_ context.Context, rayCluster *rayv1.RayCluster) error {
 	rayclusterlog.Info("default", "name", rayCluster.Name)
 
 	// Initialize annotations map if nil
@@ -64,8 +61,7 @@ func (d *RayClusterDefaulter) isOpenShift() bool {
 
 // SetupRayClusterDefaulterWithManager registers the defaulting webhook for RayCluster
 func SetupRayClusterDefaulterWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&rayv1.RayCluster{}).
+	return ctrl.NewWebhookManagedBy(mgr, &rayv1.RayCluster{}).
 		WithDefaulter(&RayClusterDefaulter{
 			RESTMapper: mgr.GetRESTMapper(),
 		}).
