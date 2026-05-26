@@ -42,6 +42,10 @@ spec:
             {{- $args = append $args "--watch-namespace" }}
             {{- $args = append $args .Values.watchNamespace }}
             {{- end }}
+            {{- if .Values.enableModuleController }}
+            {{- $args = append $args "--enable-module-controller=true" }}
+            {{- $args = append $args (printf "--operator-namespace=%s" .Values.operatorNamespace) }}
+            {{- end }}
             {{- toYaml $args | nindent 12 }}
           ports:
             - name: metrics

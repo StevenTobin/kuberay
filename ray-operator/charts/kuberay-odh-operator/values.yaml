@@ -11,6 +11,7 @@ serviceAccount:
   name: kuberay-operator
 
 enableLeaderElection: true
+enableModuleController: true
 
 # Comma-separated namespaces to watch. Empty = all namespaces.
 watchNamespace: ""
